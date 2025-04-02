@@ -2,55 +2,50 @@
 #define __minispark_h__
 
 #define MAXDEPS (2)
-#define TIME_DIFF_MICROS(start, end) \
-  (((end.tv_sec - start.tv_sec) * 1000000L) + ((end.tv_nsec - start.tv_nsec) / 1000L))
+#define TIME_DIFF_MICROS(start, end)            \
+    (((end.tv_sec - start.tv_sec) * 1000000L) + \
+     ((end.tv_nsec - start.tv_nsec) / 1000L))
 
 struct RDD;
 struct List;
 
-typedef struct RDD RDD; // forward decl. of struct RDD
-typedef struct List List; // forward decl. of List.
+typedef struct RDD RDD;    // forward decl. of struct RDD
+typedef struct List List;  // forward decl. of List.
 // Minimally, we assume "list_add_elem(List *l, void*)"
 
 // Different function pointer types used by minispark
 typedef void* (*Mapper)(void* arg);
 typedef int (*Filter)(void* arg, void* pred);
 typedef void* (*Joiner)(void* arg1, void* arg2, void* arg);
-typedef unsigned long (*Partitioner)(void *arg, int numpartitions, void* ctx);
+typedef unsigned long (*Partitioner)(void* arg, int numpartitions, void* ctx);
 typedef void (*Printer)(void* arg);
 
-typedef enum {
-  MAP,
-  FILTER,
-  JOIN,
-  PARTITIONBY,
-  FILE_BACKED
-} Transform;
+typedef enum { MAP, FILTER, JOIN, PARTITIONBY, FILE_BACKED } Transform;
 
-struct RDD {    
-  Transform trans; // transform type, see enum
-  void* fn; // transformation function
-  void* ctx; // used by minispark lib functions
-  List* partitions; // list of partitions
-  
-  RDD* dependencies[MAXDEPS];
-  int numdependencies; // 0, 1, or 2
+struct RDD {
+    Transform trans;   // transform type, see enum
+    void* fn;          // transformation function
+    void* ctx;         // used by minispark lib functions
+    List* partitions;  // list of partitions
 
-  // you may want extra data members here
+    RDD* dependencies[MAXDEPS];
+    int numdependencies;  // 0, 1, or 2
+
+    // you may want extra data members here
 };
 
 typedef struct {
-  struct timespec created;
-  struct timespec scheduled;
-  size_t duration; // in usec
-  RDD* rdd;
-  int pnum;
+    struct timespec created;
+    struct timespec scheduled;
+    size_t duration;  // in usec
+    RDD* rdd;
+    int pnum;
 } TaskMetric;
 
 typedef struct {
-  RDD* rdd;
-  int pnum;
-  TaskMetric* metric;
+    RDD* rdd;
+    int pnum;
+    TaskMetric* metric;
 } Task;
 
 //////// actions ////////
@@ -100,5 +95,4 @@ void MS_Run();
 // all RDDs allocated during runtime.
 void MS_TearDown();
 
-
-#endif // __minispark_h__
+#endif  // __minispark_h__
