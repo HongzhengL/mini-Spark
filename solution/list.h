@@ -1,0 +1,94 @@
+/**
+ * @file list.h
+ * @author
+ * @brief Definition of a dynamic generic list
+ * @version 0.1
+ * @date 2025-04-09
+ *
+ * @copyright Copyright (c) 2025
+ *
+ */
+#ifndef __LIST_H__
+#define __LIST_H__
+
+/**
+ * @brief Generic list structure.
+ *
+ * The List structure maintains an array of void pointers,
+ * its current size (number of elements) and its capacity.
+ */
+typedef struct List {
+    int size;     /**< Current number of elements in the list */
+    int capacity; /**< Maximum number of elements before needing to grow */
+    int pos;      /**< Internal iterator position used for traversal */
+    void** data;  /**< Pointer to an array of generic pointers */
+} List;
+
+/**
+ * @brief Initialize a new list with a given initial capacity.
+ *
+ * This function allocates memory for a new List structure and initializes its
+ * fields.
+ *
+ * @param capacity The initial capacity for the list.
+ * @return List* Pointer to the newly created list.
+ */
+List* list_init(int capacity) __attribute__((warn_unused_result));
+
+/**
+ * @brief Add an element to the list.
+ *
+ * Inserts a new element into the list. If the list has reached its current
+ * capacity, the internal storage is automatically doubled.
+ *
+ * @param l Pointer to the list.
+ * @param elem Generic pointer to the element to add.
+ */
+void list_add_elem(List* l, void* elem);
+
+/**
+ * @brief Retrieve the current element pointed to by the internal iterator.
+ *
+ * Returns the element at the current iterator position (`pos`), or NULL if
+ * there are no more elements to return (i.e., if `pos >= size`).
+ *
+ * @param l Pointer to the list.
+ * @return void* Pointer to the current element, or NULL if the position is
+ * invalid.
+ */
+void* get_elem(List* l);
+
+/**
+ * @brief Retrieve the next element and advance the internal iterator.
+ *
+ * Returns the element at the current iterator position (`pos`) and then
+ * advances `pos` by 1. Returns NULL if there are no more elements.
+ *
+ * @param l Pointer to the list.
+ * @return void* Pointer to the next element, or NULL if the iterator has
+ * reached the end.
+ */
+void* get_next_elem(List* l);
+
+/**
+ * @brief Reset the internal iterator to the start of the list.
+ *
+ * Sets the internal iterator (`pos`) back to 0, allowing iteration
+ * from the beginning of the list using `get_elem()` or `get_next_elem()`.
+ *
+ * @param l Pointer to the list.
+ */
+void seek_to_start(List* l);
+
+/**
+ * @brief Free the list structure.
+ *
+ * Frees the memory allocated for the list's internal data array and the list
+ * structure itself. Note that this function does not free any memory pointed to
+ * by the individual elements, the caller is responsible for that.
+ *
+ * @param l Pointer to the list to free.
+ */
+void free_list(List* l);
+
+#endif  // !__LIST_H__
