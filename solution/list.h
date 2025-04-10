@@ -11,6 +11,8 @@
 #ifndef __LIST_H__
 #define __LIST_H__
 
+#define LIST_GROWTH_FACTOR 2
+
 /**
  * @brief Generic list structure.
  *
@@ -21,6 +23,7 @@ typedef struct List {
     int size;     /**< Current number of elements in the list */
     int capacity; /**< Maximum number of elements before needing to grow */
     int pos;      /**< Internal iterator position used for traversal */
+    int start;    /**< Index of the front element in the ring buffer. */
     void** data;  /**< Pointer to an array of generic pointers */
 } List;
 
@@ -39,12 +42,24 @@ List* list_init(int capacity) __attribute__((warn_unused_result));
  * @brief Add an element to the list.
  *
  * Inserts a new element into the list. If the list has reached its current
- * capacity, the internal storage is automatically doubled.
+ * capacity, the internal storage is automatically increase by
+ * LIST_GROWTH_FACTOR.
  *
  * @param l Pointer to the list.
  * @param elem Generic pointer to the element to add.
  */
 void list_add_elem(List* l, void* elem);
+
+/**
+ * @brief Remove and return the front element of the list.
+ *
+ * If the list is empty, returns NULL. Otherwise, removes the front
+ * element (the one at `start`) and updates the ring buffer accordingly.
+ *
+ * @param l Pointer to the list.
+ * @return The front element, or NULL if the list is empty.
+ */
+void* list_remove_front(List* l);
 
 /**
  * @brief Retrieve the current element pointed to by the internal iterator.
@@ -54,27 +69,27 @@ void list_add_elem(List* l, void* elem);
  *
  * @param l Pointer to the list.
  * @return void* Pointer to the current element, or NULL if the position is
- * invalid.
+ * invalid or if list is NULL
  */
 void* get_elem(List* l);
 
 /**
- * @brief Retrieve the next element and advance the internal iterator.
+ * @brief Retrieve the current element and advance the internal iterator.
  *
  * Returns the element at the current iterator position (`pos`) and then
  * advances `pos` by 1. Returns NULL if there are no more elements.
  *
  * @param l Pointer to the list.
  * @return void* Pointer to the next element, or NULL if the iterator has
- * reached the end.
+ * reached the end, or list is NULL, or list has no element
  */
-void* get_next_elem(List* l);
+void* next(List* l);
 
 /**
  * @brief Reset the internal iterator to the start of the list.
  *
  * Sets the internal iterator (`pos`) back to 0, allowing iteration
- * from the beginning of the list using `get_elem()` or `get_next_elem()`.
+ * from the beginning of the list using `get_elem()` or `next()`.
  *
  * @param l Pointer to the list.
  */
