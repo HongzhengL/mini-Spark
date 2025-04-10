@@ -3,6 +3,8 @@
 
 #include <pthread.h>
 
+#include "list.h"
+
 #define MAXDEPS (2)
 #define TIME_DIFF_MICROS(start, end)            \
     (((end.tv_sec - start.tv_sec) * 1000000L) + \
@@ -34,6 +36,7 @@ struct RDD {
     int numdependencies;  // 0, 1, or 2
 
     // you may want extra data members here
+    int numpartitions;
 };
 
 typedef struct {
