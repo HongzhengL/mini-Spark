@@ -4,3 +4,4 @@ bin/
 *.log
 .clang-format
 tests/tests-out/
+.vscode/
