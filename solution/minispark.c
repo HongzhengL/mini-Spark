@@ -16,7 +16,9 @@ void print_formatted_metric(TaskMetric *metric, FILE *fp) {
             metric->duration);
 }
 
-int max(int a, int b) { return a > b ? a : b; }
+int max(int a, int b) {
+    return a > b ? a : b;
+}
 
 RDD *create_rdd(int numdeps, Transform t, void *fn, ...) {
     RDD *rdd = malloc(sizeof(RDD));
@@ -44,7 +46,9 @@ RDD *create_rdd(int numdeps, Transform t, void *fn, ...) {
 }
 
 /* RDD constructors */
-RDD *map(RDD *dep, Mapper fn) { return create_rdd(1, MAP, fn, dep); }
+RDD *map(RDD *dep, Mapper fn) {
+    return create_rdd(1, MAP, fn, dep);
+}
 
 RDD *filter(RDD *dep, Filter fn, void *ctx) {
     RDD *rdd = create_rdd(1, FILTER, fn, dep);
@@ -67,7 +71,9 @@ RDD *join(RDD *dep1, RDD *dep2, Joiner fn, void *ctx) {
 }
 
 /* A special mapper */
-void *identity(void *arg) { return arg; }
+void *identity(void *arg) {
+    return arg;
+}
 
 /* Special RDD constructor.
  * By convention, this is how we read from input files. */
@@ -90,11 +96,17 @@ RDD *RDDFromFiles(char **filenames, int numfiles) {
     return rdd;
 }
 
-void execute(RDD *rdd) { return; }
+void execute(RDD *rdd) {
+    return;
+}
 
-void MS_Run() { return; }
+void MS_Run() {
+    return;
+}
 
-void MS_TearDown() { return; }
+void MS_TearDown() {
+    return;
+}
 
 int count(RDD *rdd) {
     execute(rdd);
