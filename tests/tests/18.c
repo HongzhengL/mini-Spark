@@ -13,7 +13,7 @@
 
 int main() {
   struct timeval start, end;
-
+  measureNumNops();
   cpu_set_t set;
   CPU_ZERO(&set);
 
@@ -62,12 +62,12 @@ int main() {
     return 0;
   }
 
-  double predict = (2*10.0 / cpu_cnt)+1;
-  if (elapsed < predict)
-    printf("ok");
-    else if (elapsed < predict -1.5) {
+  double predict = (2*1.920/ (cpu_cnt-1))+1;
+   if (elapsed < 0.1) {
       printf("Too fast! Are you evaluating before count()?");
-    } else
+    } else if (elapsed < predict)
+    printf("ok");
+    else
     printf("Too slow. elapsed %.2f predict %.2f\n", elapsed, predict);
 
   return 0;

@@ -8,6 +8,9 @@
 #include "minispark.h"
 
 int main() {
+
+  measureNumNops();
+
   struct timeval start, end;
 
   cpu_set_t set;
@@ -52,12 +55,12 @@ int main() {
 
 
   // Check if it scales. 
-  double predict = ((3*10.0)/ cpu_cnt)+1;
-  if (elapsed < predict)
-    printf("ok");
-  else if (elapsed < predict -1.5) {
+  double predict = ((3*2*10.0)/ (cpu_cnt-1))+1;
+  if (elapsed < 1) {
     printf("Too fast! Are you evaluating before count()?");
-  } else
+  }else if (elapsed < predict)
+    printf("ok");
+  else 
     printf("Too slow. elapsed %.2f predict %.2f\n", elapsed, predict);
 
   for (int i=0; i< 1000; i++) {
