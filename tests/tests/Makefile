@@ -26,7 +26,7 @@ $(PROGRAMS): %.tmp : $(APP_DIR)/%.o $(OBJS)
 	$(CC) $(CFLAGS) -o $@ $^ -L$(SOL_DIR) -l$(MS)
 
 $(PROGRAMS_TSAN): %.tmp : $(APP_DIR)/%.o $(OBJS)
-	$(CC) $(CFLAGS) -fsanitize=thread -o $@ $^ -L$(SOL_DIR) -l$(MS)
+	$(CC) $(CFLAGS) -fsanitize=thread  -o $@ $^ -L$(SOL_DIR) -l$(MS)
 
 $(PROGRAMS_ASAN): %.tmp : $(APP_DIR)/%.o $(OBJS)
 	$(CC) $(CFLAGS) -fsanitize=address -o $@ $^ -L$(SOL_DIR) -l$(MS)
