@@ -3,6 +3,12 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+
+#include "list.h"
+#include "thread_pool.h"
+
+#define LIST_INIT_CAPACITY 10
 
 // Working with metrics...
 // Recording the current time in a `struct timespec`:
@@ -101,15 +107,68 @@ RDD *RDDFromFiles(char **filenames, int numfiles) {
 }
 
 void execute(RDD *rdd) {
+    if (rdd->numdependencies == 2) {
+        List *l1 = list_init(LIST_INIT_CAPACITY);
+        List *l2 = list_init(LIST_INIT_CAPACITY);
+        RDD *part1 = rdd->dependencies[0];
+        while (part1->numdependencies != 0) {
+            list_add_elem(l1, part1);
+            part1 = part1->dependencies[0];
+        }
+        list_add_elem(l1, part1);
+        RDD *part2 = rdd->dependencies[1];
+        while (part2->numdependencies != 0) {
+            list_add_elem(l2, part2);
+            part2 = part2->dependencies[0];
+        }
+        list_add_elem(l2, part2);
+        List *all = list_init(l1->size + l2->size);
+        while ((part1 = (RDD *)list_remove_front(l1)) != NULL ||
+               (part2 = (RDD *)list_remove_front(l2)) != NULL) {
+            if (part1) {
+                list_add_elem(all, part1);
+            }
+            if (part2) {
+                list_add_elem(all, part2);
+            }
+        }
+        List *rdds = list_reverse(all);
+        free_list(all);
+        seek_to_start(rdds);
+        RDD *rdd_ptr = NULL;
+        while ((rdd_ptr = next(rdds)) != NULL) {
+            for (int i = 0; i < rdd_ptr->numpartitions; ++i) {
+                Task *task = (Task *)malloc(sizeof(Task));
+                task->rdd = rdd_ptr;
+                task->pnum = i;
+                thread_pool_submit(task);
+            }
+        }
+    } else if (rdd->numdependencies == 1) {
+        execute(rdd->dependencies[0]);
+        for (int i = 0; i < rdd->numpartitions; ++i) {
+            Task *task = (Task *)malloc(sizeof(Task));
+            task->rdd = rdd;
+            task->pnum = i;
+            thread_pool_submit(task);
+        }
+    } else if (rdd->numdependencies == 0) {
+        for (int i = 0; i < rdd->numpartitions; ++i) {
+            Task *task = (Task *)malloc(sizeof(Task));
+            task->rdd = rdd;
+            task->pnum = i;
+            thread_pool_submit(task);
+        }
+    }
     return;
 }
 
 void MS_Run() {
-    return;
+    thread_pool_init(get_num_threads());
 }
 
 void MS_TearDown() {
-    return;
+    thread_pool_destroy();
 }
 
 int count(RDD *rdd) {
