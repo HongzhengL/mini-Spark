@@ -1,9 +1,11 @@
 #include "minispark.h"
 
+#include <bits/time.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #include "list.h"
 #include "thread_pool.h"
@@ -148,6 +150,9 @@ void execute(RDD *rdd) {
                 task->rdd = rdd_ptr;
                 task->pnum = i;
                 task->metric = metric;
+                metric->pnum = i;
+                metric->rdd = rdd_ptr;
+                clock_gettime(CLOCK_MONOTONIC, &metric->created);
                 thread_pool_submit(task);
             }
         }
@@ -162,6 +167,9 @@ void execute(RDD *rdd) {
             task->rdd = rdd;
             task->pnum = i;
             task->metric = metric;
+            metric->pnum = i;
+            metric->rdd = rdd;
+            clock_gettime(CLOCK_MONOTONIC, &metric->created);
             thread_pool_submit(task);
         }
     } else if (rdd->numdependencies == 0) {
@@ -174,6 +182,9 @@ void execute(RDD *rdd) {
             task->rdd = rdd;
             task->pnum = i;
             task->metric = metric;
+            metric->pnum = i;
+            metric->rdd = rdd;
+            clock_gettime(CLOCK_MONOTONIC, &metric->created);
             thread_pool_submit(task);
         }
     }
