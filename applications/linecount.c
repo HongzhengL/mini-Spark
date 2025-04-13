@@ -1,8 +1,8 @@
-#include <stdio.h>
 #include "lib.h"
 #include "minispark.h"
+#include <stdio.h>
 
-int main(int argc, char* argv[]) {
+int main(int argc, char *argv[]) {
   if (argc < 2) {
     printf("need at least one file\n");
     return -1;
@@ -10,7 +10,7 @@ int main(int argc, char* argv[]) {
 
   MS_Run();
 
-  RDD* files = RDDFromFiles(argv + 1, argc - 1);
+  RDD *files = RDDFromFiles(argv + 1, argc - 1);
   int totalnumlines = count(map(files, GetLines));
 
   MS_TearDown();
