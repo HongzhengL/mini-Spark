@@ -9,6 +9,7 @@
 #include "thread_pool.h"
 
 #define LIST_INIT_CAPACITY 10
+#define CONTENT_INIT_CAPACITY 1024
 
 // Working with metrics...
 // Recording the current time in a `struct timespec`:
@@ -52,6 +53,7 @@ RDD *create_rdd(int numdeps, Transform t, void *fn, ...) {
     rdd->trans = t;
     rdd->fn = fn;
     rdd->partitions = NULL;
+    rdd->numpartitions = maxpartitions;
     return rdd;
 }
 
@@ -137,26 +139,41 @@ void execute(RDD *rdd) {
         seek_to_start(rdds);
         RDD *rdd_ptr = NULL;
         while ((rdd_ptr = next(rdds)) != NULL) {
+            rdd_ptr->partitions = list_init(rdd_ptr->numpartitions);
             for (int i = 0; i < rdd_ptr->numpartitions; ++i) {
+                List *content = list_init(CONTENT_INIT_CAPACITY);
+                list_add_elem(rdd_ptr->partitions, content);
                 Task *task = (Task *)malloc(sizeof(Task));
+                TaskMetric *metric = (TaskMetric *)malloc(sizeof(TaskMetric));
                 task->rdd = rdd_ptr;
                 task->pnum = i;
+                task->metric = metric;
                 thread_pool_submit(task);
             }
         }
     } else if (rdd->numdependencies == 1) {
         execute(rdd->dependencies[0]);
+        rdd->partitions = list_init(rdd->numpartitions);
         for (int i = 0; i < rdd->numpartitions; ++i) {
+            List *content = list_init(CONTENT_INIT_CAPACITY);
+            list_add_elem(rdd->partitions, (void *)content);
             Task *task = (Task *)malloc(sizeof(Task));
+            TaskMetric *metric = (TaskMetric *)malloc(sizeof(TaskMetric));
             task->rdd = rdd;
             task->pnum = i;
+            task->metric = metric;
             thread_pool_submit(task);
         }
     } else if (rdd->numdependencies == 0) {
+        rdd->partitions = list_init(rdd->numpartitions);
         for (int i = 0; i < rdd->numpartitions; ++i) {
+            List *content = list_init(CONTENT_INIT_CAPACITY);
+            list_add_elem(rdd->partitions, (void *)content);
             Task *task = (Task *)malloc(sizeof(Task));
+            TaskMetric *metric = (TaskMetric *)malloc(sizeof(TaskMetric));
             task->rdd = rdd;
             task->pnum = i;
+            task->metric = metric;
             thread_pool_submit(task);
         }
     }
@@ -171,11 +188,32 @@ void MS_TearDown() {
     thread_pool_destroy();
 }
 
+static void free_RDD_resource(RDD *rdd) {
+    List *curr = NULL;
+    seek_to_start(rdd->partitions);
+    while ((curr = (List *)next(rdd->partitions)) != NULL) {
+        void *item = NULL;
+        seek_to_start(curr);
+        while ((item = next(curr)) != NULL) {
+            free(item);
+        }
+        free_list(curr);
+    }
+    free_list(rdd->partitions);
+}
+
 int count(RDD *rdd) {
     execute(rdd);
 
     int count = 0;
-    // count all the items in rdd
+    List *curr = NULL;
+    seek_to_start(rdd->partitions);
+    while ((curr = (List *)next(rdd->partitions)) != NULL) {
+        count += curr->size;
+    }
+
+    free_RDD_resource(rdd);
+
     return count;
 }
 
@@ -184,4 +222,15 @@ void print(RDD *rdd, Printer p) {
 
     // print all the items in rdd
     // aka... `p(item)` for all items in rdd
+    List *curr = NULL;
+    seek_to_start(rdd->partitions);
+    while ((curr = (List *)next(rdd->partitions)) != NULL) {
+        void *item = NULL;
+        seek_to_start(curr);
+        while ((item = next(curr)) != NULL) {
+            p(item);
+        }
+    }
+
+    free_RDD_resource(rdd);
 }
