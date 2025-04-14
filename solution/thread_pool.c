@@ -64,7 +64,7 @@ static void do_computation(Task* topTask) {
             if (dependentRDD[0]->trans ==
                 FILE_BACKED) {  // partition with a single FilePointer inside
                 while (1) {
-                    void* line = computeFunction(get_nth_elem(dependentRDD[0]->partitions, partitionIndex)));
+                    void* line = ((Mapper)(computeFunction))(get_nth_elem(dependentRDD[0]->partitions, partitionIndex)));
                     if (line)
                         list_add_elem(contentList, line);
                     else
@@ -76,7 +76,7 @@ static void do_computation(Task* topTask) {
                     dependentRDD[0]->partitions, partitionIndex);
                 seek_to_start(oldContent);
                 while (line = next(oldContent)) {
-                    list_add_elem(contentList, computeFunction(line));
+                    list_add_elem(contentList, ((Mapper)(computeFunction))(line));
                 }
             }
         } else if (topTask->rdd->trans == FILTER) {
@@ -86,7 +86,7 @@ static void do_computation(Task* topTask) {
                                                    partitionIndex);
             seek_to_start(oldContent);
             while (line = next(oldContent)) {
-                if (computeFunction(line, topTask->rdd->ctx)) {
+                if (((Filter)(computeFunction))(line, topTask->rdd->ctx)) {
                     list_add_elem(contentList, line);
                 }
             }
@@ -104,7 +104,7 @@ static void do_computation(Task* topTask) {
             while (lineA = next(oldContentA)) {
                 seek_to_start(oldContentB);
                 while (lineB = next(oldContentB)) {
-                    newLine = computeFunction(lineA, lineB, topTask->rdd->ctx);
+                    newLine = ((Joiner)(computeFunction))(lineA, lineB, topTask->rdd->ctx);
                     list_add_elem(contentList, newLine);
                 }
             }
@@ -115,7 +115,7 @@ static void do_computation(Task* topTask) {
                      lineIndex <
                      get_size(get_nth_elem(dependentRDD[0]->partitions, i));
                      lineIndex++) {
-                    int repartitionNum = computeFunction(
+                    int repartitionNum = ((Partitioner)(computeFunction))(
                         get_nth_elem(dependentRDD[0]->partitions, lineIndex),
                         topTask->rdd->numpartitions, topTask->rdd->ctx);
                     if (repartitionNum == partitionIndex) {
