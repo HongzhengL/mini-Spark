@@ -215,6 +215,7 @@ static void free_RDD_resource(RDD *rdd) {
 
 int count(RDD *rdd) {
     execute(rdd);
+    thread_pool_wait();
 
     int count = 0;
     List *curr = NULL;
@@ -230,6 +231,7 @@ int count(RDD *rdd) {
 
 void print(RDD *rdd, Printer p) {
     execute(rdd);
+    thread_pool_wait();
 
     // print all the items in rdd
     // aka... `p(item)` for all items in rdd
