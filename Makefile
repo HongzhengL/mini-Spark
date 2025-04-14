@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -Wall -Wextra -Og -g -pthread -I$(SOL_DIR) -I$(LIB_DIR)
+CFLAGS = -Wall -Wextra -O0 -ggdb -pthread -I$(SOL_DIR) -I$(LIB_DIR)
 
 APP_DIR = applications
 LIB_DIR = lib

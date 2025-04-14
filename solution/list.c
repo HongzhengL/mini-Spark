@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <assert.h>
 
 List* list_init(int capacity) {
     List* l = (List*)malloc(sizeof(List));
@@ -11,6 +12,7 @@ List* list_init(int capacity) {
         exit(EXIT_FAILURE);
     }
 
+    assert(capacity > 0);
     l->capacity = capacity;
     l->size = 0;
     l->start = 0;

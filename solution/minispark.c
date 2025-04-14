@@ -63,6 +63,7 @@ RDD *create_rdd(int numdeps, Transform t, void *fn, ...) {
 
 /* RDD constructors */
 RDD *map(RDD *dep, Mapper fn) {
+    //fprintf(stderr, "from minispark.c@66: %p\n", get_nth_elem(dep->partitions, 0));
     return create_rdd(1, MAP, fn, dep);
 }
 
@@ -99,16 +100,19 @@ RDD *RDDFromFiles(char **filenames, int numfiles) {
 
     for (int i = 0; i < numfiles; i++) {
         FILE *fp = fopen(filenames[i], "r");
+        //fprintf(stderr, "from minispark.c@102 FP Addr: %s.|.%p\n", filenames[i], fp);
         if (fp == NULL) {
             perror("fopen");
             exit(1);
         }
         list_add_elem(rdd->partitions, fp);
+        //fprintf(stderr, "from minispark.c@108 FP Addr: %s.|.%p\n", filenames[i], get_nth_elem(rdd->partitions, i));
     }
 
     rdd->numdependencies = 0;
     rdd->trans = FILE_BACKED;
     rdd->fn = (void *)identity;
+    rdd->numpartitions = numfiles;
     return rdd;
 }
 
@@ -143,10 +147,7 @@ void execute(RDD *rdd) {
         seek_to_start(rdds);
         RDD *rdd_ptr = NULL;
         while ((rdd_ptr = next(rdds)) != NULL) {
-            rdd_ptr->partitions = list_init(rdd_ptr->numpartitions);
             for (int i = 0; i < rdd_ptr->numpartitions; ++i) {
-                List *content = list_init(CONTENT_INIT_CAPACITY);
-                list_add_elem(rdd_ptr->partitions, content);
                 Task *task = (Task *)malloc(sizeof(Task));
                 TaskMetric *metric = (TaskMetric *)malloc(sizeof(TaskMetric));
                 task->rdd = rdd_ptr;
@@ -160,10 +161,7 @@ void execute(RDD *rdd) {
         }
     } else if (rdd->numdependencies == 1) {
         execute(rdd->dependencies[0]);
-        rdd->partitions = list_init(rdd->numpartitions);
         for (int i = 0; i < rdd->numpartitions; ++i) {
-            List *content = list_init(CONTENT_INIT_CAPACITY);
-            list_add_elem(rdd->partitions, (void *)content);
             Task *task = (Task *)malloc(sizeof(Task));
             TaskMetric *metric = (TaskMetric *)malloc(sizeof(TaskMetric));
             task->rdd = rdd;
@@ -175,10 +173,7 @@ void execute(RDD *rdd) {
             thread_pool_submit(task);
         }
     } else if (rdd->numdependencies == 0) {
-        rdd->partitions = list_init(rdd->numpartitions);
         for (int i = 0; i < rdd->numpartitions; ++i) {
-            List *content = list_init(CONTENT_INIT_CAPACITY);
-            list_add_elem(rdd->partitions, (void *)content);
             Task *task = (Task *)malloc(sizeof(Task));
             TaskMetric *metric = (TaskMetric *)malloc(sizeof(TaskMetric));
             task->rdd = rdd;
@@ -194,7 +189,8 @@ void execute(RDD *rdd) {
 }
 
 void MS_Run() {
-    thread_pool_init(get_num_threads());
+    //thread_pool_init(get_num_threads());
+    thread_pool_init(1);
 }
 
 void MS_TearDown() {
@@ -232,7 +228,9 @@ int count(RDD *rdd) {
 }
 
 void print(RDD *rdd, Printer p) {
+    //fprintf(stderr, "from minispark.c@240: %p\n", get_nth_elem(rdd->dependencies[0]->partitions, 0));
     execute(rdd);
+    //fprintf(stderr, "from minispark.c@242: %p\n", get_nth_elem(rdd->dependencies[0]->partitions, 0));
     thread_pool_wait();
 
     // print all the items in rdd
