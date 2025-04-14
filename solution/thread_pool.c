@@ -1,16 +1,26 @@
 #define _GNU_SOURCE
-
 #include "thread_pool.h"
 
+#include <pthread.h>
 #include <sched.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "list.h"
+#include "minispark.h"
+
+#define QUEUE_CAPACITY 1024
+
 typedef struct {
     pthread_t* threads;
-    int numThread;
+    int num_thread;
+    List* task_queue;
+    int num_task;
 
-    // TODO: add some cv?
+    pthread_mutex_t queue_lock;
+    pthread_cond_t queue_not_empty;
+    pthread_cond_t queue_not_full;
 } ThreadPool;
 
 ThreadPool pool;
@@ -27,32 +37,50 @@ int get_num_threads() {
     return CPU_COUNT(&set);
 }
 
+void do_computation(Task* task) {
+    // TODO
+}
+
 void* consumer(void* arg) {
     while (1) {
-        pthread_mutex_lock(&cvLock);
-        while (numFull == 0) {
-            pthread_cond_wait(&cvFill, &cvLock);
+        pthread_mutex_lock(&pool.queue_lock);
+        while (pool.num_task == 0) {
+            pthread_cond_wait(&pool.queue_not_empty, &pool.queue_lock);
         }
-        int temp = pop_and_compute();
-        pthread_cond_signal(&cvEmpty);
-        pthread_mutex_unlock(&cvLock);
+        Task* task = (Task*)list_remove_front(pool.task_queue);
+        --pool.num_task;
+        pthread_cond_signal(&pool.queue_not_full);
+        pthread_mutex_unlock(&pool.queue_lock);
+        do_computation(task);
     }
 }
 
 void thread_pool_init(int numthreads) {
     pool.threads = (pthread_t*)malloc(sizeof(pthread_t) * numthreads);
+    pool.num_thread = 0;
     for (int i = 0; i < numthreads; i++) {
         if (pthread_create(&(pool.threads[i]), NULL, consumer, NULL) != 0) {
+            perror("pthread_create");
             thread_pool_destroy();
-            return;
+            exit(EXIT_FAILURE);
         }
+        ++pool.num_thread;
     }
-    pool.numThread = numthreads;
+    pool.task_queue = list_init(QUEUE_CAPACITY);
+    pool.num_task = 0;
+    pthread_mutex_init(&pool.queue_lock, NULL);
+    pthread_cond_init(&pool.queue_not_empty, NULL);
+    pthread_cond_init(&pool.queue_not_full, NULL);
 }
 
 void thread_pool_destroy() {
-    for (int i = 0; i < pool.numThread; i++) {
+    for (int i = 0; i < pool.num_thread; i++) {
+        pthread_join(pool.threads[i], NULL);
     }
+    free(pool.threads);
+    pthread_mutex_destroy(&pool.queue_lock);
+    pthread_cond_destroy(&pool.queue_not_empty);
+    pthread_cond_destroy(&pool.queue_not_full);
 }
 
 void thread_pool_wait() {
@@ -60,5 +88,15 @@ void thread_pool_wait() {
 }
 
 void thread_pool_submit(Task* task) {
-    // TODO
+    if (!task) {
+        return;
+    }
+    pthread_mutex_lock(&pool.queue_lock);
+    while (pool.num_task == QUEUE_CAPACITY) {
+        pthread_cond_wait(&pool.queue_not_full, &pool.queue_lock);
+    }
+    list_add_elem(pool.task_queue, task);
+    ++pool.num_task;
+    pthread_cond_signal(&pool.queue_not_empty);
+    pthread_mutex_unlock(&pool.queue_lock);
 }

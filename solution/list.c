@@ -97,3 +97,7 @@ void free_list(List* l) {
         free((void*)l);
     }
 }
+
+void* get_nth_elem(List* l, int n) {
+    return l->data[(l->start + n) % l->capacity];
+}
