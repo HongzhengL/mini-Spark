@@ -61,12 +61,14 @@ void pop_and_compute() {
             // TODO: How to handle root node? (numdependencies == 0)
 
             // There must be only one dependent RDD
-            if (dependentRDD[0]->trans == FILE_BACKED) { // partition with a single FP inside
+            if (dependentRDD[0]->trans ==
+                FILE_BACKED) {  // partition with a single FP inside
                 /*
-                List* oldContent = (List*)get_nth_elem(dependentRDD[0]->partitions, partitionIndex);
-                seek_to_start(oldContent);
-                while(line = dependentRDD[0]->fn(oldContent)) {
-                    list_add_elem(contentList, computeFunction(line));
+                List* oldContent =
+                (List*)get_nth_elem(dependentRDD[0]->partitions,
+                partitionIndex); seek_to_start(oldContent); while(line =
+                dependentRDD[0]->fn(oldContent)) { list_add_elem(contentList,
+                computeFunction(line));
                 }
                 */
                 while (1) {
@@ -76,11 +78,12 @@ void pop_and_compute() {
                     else
                         break;
                 }
-            } else { // partion with finite regular elements
+            } else {  // partion with finite regular elements
                 void* line = NULL;
-                List* oldContent = (List*)get_nth_elem(dependentRDD[0]->partitions, partitionIndex);
+                List* oldContent = (List*)get_nth_elem(
+                    dependentRDD[0]->partitions, partitionIndex);
                 seek_to_start(oldContent);
-                while(line = next(oldContent)) {
+                while (line = next(oldContent)) {
                     list_add_elem(contentList, computeFunction(line));
                 }
             }
@@ -117,17 +120,17 @@ void pop_and_compute() {
         } else if (topTask->rdd->trans == PARTITIONBY) {
             // There must be one dependent RDD
             for (int i = 0; i < dependentRDD[0]->numpartitions; i++) {
-                for (int lineIndex = 0; lineIndex < size(get_nth_elem(dependentRDD[0]->partitions, i)); lineIndex++) {
+                for (int lineIndex = 0;
+                     lineIndex <
+                     size(get_nth_elem(dependentRDD[0]->partitions, i));
+                     lineIndex++) {
                     int repartitionNum = computeFunction(
                         get_nth_elem(dependentRDD[0]->partitions, lineIndex),
-                        topTask->rdd->numpartitions,
-                        topTask->rdd->ctx
-                    );
+                        topTask->rdd->numpartitions, topTask->rdd->ctx);
                     if (repartitionNum == partitionIndex) {
-                        list_add_elem(
-                            contentList,
-                            get_nth_elem(dependentRDD[0]->partitions, lineIndex)
-                        );
+                        list_add_elem(contentList,
+                                      get_nth_elem(dependentRDD[0]->partitions,
+                                                   lineIndex));
                     }
                 }
             }
@@ -135,7 +138,7 @@ void pop_and_compute() {
 
         pthread_mutex_lock(&(topTask->rdd->partitionListLock));
         topTask->rdd->numComputed++;
-        if(topTask->rdd->partitions == NULL)
+        if (topTask->rdd->partitions == NULL)
             topTask->rdd->partitions = list_init(1024);
         list_add_elem(topTask->rdd->partitions, contentList);
         pthread_mutex_unlock(&(topTask->rdd->partitionListLock));
