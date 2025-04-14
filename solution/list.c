@@ -1,9 +1,9 @@
 #include "list.h"
 
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <assert.h>
 
 List* list_init(int capacity) {
     List* l = (List*)malloc(sizeof(List));

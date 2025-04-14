@@ -13,9 +13,9 @@
 #define QUEUE_CAPACITY 1024
 
 typedef struct {
-    pthread_t* threads;
+    pthread_t *threads;
     int num_thread;
-    List* task_queue;
+    List *task_queue;
     int num_task;
 
     pthread_mutex_t queue_lock;
@@ -37,12 +37,12 @@ int get_num_threads() {
     return CPU_COUNT(&set);
 }
 
-static void do_computation(Task* topTask) {
+static void do_computation(Task *topTask) {
     bool waitDependencies = true;
 
     int partitionIndex = topTask->pnum;
-    void* computeFunction = topTask->rdd->fn;
-    RDD** dependentRDD = topTask->rdd->dependencies;
+    void *computeFunction = topTask->rdd->fn;
+    RDD **dependentRDD = topTask->rdd->dependencies;
     if (topTask) {
         // spin until dependencies get computed
         while (waitDependencies) {
@@ -57,14 +57,14 @@ static void do_computation(Task* topTask) {
 
         // All new results of the partitions[partitionIndex] are stored in this
         // contentList
-        List* contentList = list_init(QUEUE_CAPACITY);
+        List *contentList = list_init(QUEUE_CAPACITY);
 
         if (topTask->rdd->trans == MAP) {
             // There must be only one dependent RDD
             if (dependentRDD[0]->trans ==
                 FILE_BACKED) {  // partition with a single FilePointer inside
                 while (1) {
-                    void* line = ((Mapper)(computeFunction))(get_nth_elem(
+                    void *line = ((Mapper)(computeFunction))(get_nth_elem(
                         dependentRDD[0]->partitions, partitionIndex));
                     if (line)
                         list_add_elem(contentList, line);
@@ -72,8 +72,8 @@ static void do_computation(Task* topTask) {
                         break;
                 }
             } else {  // partion with finite regular elements
-                void* line = NULL;
-                List* oldContent = (List*)get_nth_elem(
+                void *line = NULL;
+                List *oldContent = (List *)get_nth_elem(
                     dependentRDD[0]->partitions, partitionIndex);
                 seek_to_start(oldContent);
                 while ((line = next(oldContent))) {
@@ -83,9 +83,9 @@ static void do_computation(Task* topTask) {
             }
         } else if (topTask->rdd->trans == FILTER) {
             // There must be only one dependent RDD
-            void* line = NULL;
-            List* oldContent = (List*)get_nth_elem(dependentRDD[0]->partitions,
-                                                   partitionIndex);
+            void *line = NULL;
+            List *oldContent = (List *)get_nth_elem(dependentRDD[0]->partitions,
+                                                    partitionIndex);
             seek_to_start(oldContent);
             while ((line = next(oldContent))) {
                 if (((Filter)(computeFunction))(line, topTask->rdd->ctx)) {
@@ -94,13 +94,13 @@ static void do_computation(Task* topTask) {
             }
         } else if (topTask->rdd->trans == JOIN) {
             // There must be two dependent RDDs
-            void* lineA = NULL;
-            void* lineB = NULL;
-            void* newLine = NULL;
-            List* oldContentA = (List*)get_nth_elem(dependentRDD[0]->partitions,
-                                                    partitionIndex);
-            List* oldContentB = (List*)get_nth_elem(dependentRDD[1]->partitions,
-                                                    partitionIndex);
+            void *lineA = NULL;
+            void *lineB = NULL;
+            void *newLine = NULL;
+            List *oldContentA = (List *)get_nth_elem(
+                dependentRDD[0]->partitions, partitionIndex);
+            List *oldContentB = (List *)get_nth_elem(
+                dependentRDD[1]->partitions, partitionIndex);
 
             seek_to_start(oldContentA);
             while ((lineA = next(oldContentA))) {
@@ -134,20 +134,20 @@ static void do_computation(Task* topTask) {
         pthread_mutex_lock(&(topTask->rdd->partitionListLock));
         topTask->rdd->numComputed++;
         if (topTask->rdd->partitions == NULL)
-            topTask->rdd->partitions = list_init(QUEUE_CAPACITY);
+            topTask->rdd->partitions = list_init(topTask->rdd->numpartitions);
         if (get_size(contentList))  // To handle root node (FILE_BACKED)
             list_add_elem(topTask->rdd->partitions, contentList);
         pthread_mutex_unlock(&(topTask->rdd->partitionListLock));
     }
 }
 
-void* consumer(void* arg) {
+void *consumer(void *arg) {
     while (1) {
         pthread_mutex_lock(&pool.queue_lock);
         while (pool.num_task == 0) {
             pthread_cond_wait(&pool.queue_not_empty, &pool.queue_lock);
         }
-        Task* task = (Task*)list_remove_front(pool.task_queue);
+        Task *task = (Task *)list_remove_front(pool.task_queue);
         --pool.num_task;
         pthread_cond_signal(&pool.queue_not_full);
         pthread_mutex_unlock(&pool.queue_lock);
@@ -160,21 +160,20 @@ void* consumer(void* arg) {
 }
 
 void thread_pool_init(int numthreads) {
-    pool.threads = (pthread_t*)malloc(sizeof(pthread_t) * numthreads);
-    pool.num_thread = 0;
+    pool.threads = (pthread_t *)malloc(sizeof(pthread_t) * numthreads);
+    pool.num_thread = numthreads;
+    pool.task_queue = list_init(QUEUE_CAPACITY);
+    pool.num_task = 0;
+    pthread_mutex_init(&pool.queue_lock, NULL);
+    pthread_cond_init(&pool.queue_not_empty, NULL);
+    pthread_cond_init(&pool.queue_not_full, NULL);
     for (int i = 0; i < numthreads; i++) {
         if (pthread_create(&(pool.threads[i]), NULL, consumer, NULL) != 0) {
             perror("pthread_create");
             thread_pool_destroy();
             exit(EXIT_FAILURE);
         }
-        ++pool.num_thread;
     }
-    pool.task_queue = list_init(QUEUE_CAPACITY);
-    pool.num_task = 0;
-    pthread_mutex_init(&pool.queue_lock, NULL);
-    pthread_cond_init(&pool.queue_not_empty, NULL);
-    pthread_cond_init(&pool.queue_not_full, NULL);
 }
 
 void thread_pool_destroy() {
@@ -186,7 +185,7 @@ void thread_pool_destroy() {
 
 void thread_pool_wait() {
     for (int i = 0; i < pool.num_thread; ++i) {
-        Task* task = (Task*)malloc(sizeof(Task));
+        Task *task = (Task *)malloc(sizeof(Task));
         task->rdd = NULL;
         thread_pool_submit(task);
     }
@@ -195,7 +194,7 @@ void thread_pool_wait() {
     }
 }
 
-void thread_pool_submit(Task* task) {
+void thread_pool_submit(Task *task) {
     if (!task) {
         return;
     }

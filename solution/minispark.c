@@ -47,7 +47,7 @@ RDD *create_rdd(int numdeps, Transform t, void *fn, ...) {
     for (int i = 0; i < numdeps; i++) {
         RDD *dep = va_arg(args, RDD *);
         rdd->dependencies[i] = dep;
-        maxpartitions = max(maxpartitions, dep->partitions->size);
+        if (dep) maxpartitions = max(maxpartitions, dep->numpartitions);
     }
     va_end(args);
 
@@ -192,8 +192,8 @@ void execute(RDD *rdd) {
 }
 
 void MS_Run() {
-    // thread_pool_init(get_num_threads());
-    thread_pool_init(1);
+    thread_pool_init(get_num_threads());
+    // thread_pool_init(6);
 }
 
 void MS_TearDown() {
