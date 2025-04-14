@@ -61,13 +61,28 @@ void pop_and_compute() {
             // TODO: How to handle root node? (numdependencies == 0)
 
             // There must be only one dependent RDD
-            while (1) {
-        void* line = computeFunction(
-          get_nth_elem(dependentRDD[0]->partitions, partitionIndex)));
-        if (line)
-            list_add_elem(contentList, line);
-        else
-            break;
+            if (dependentRDD[0]->trans == FILE_BACKED) { // partition with a single FP inside
+                /*
+                List* oldContent = (List*)get_nth_elem(dependentRDD[0]->partitions, partitionIndex);
+                seek_to_start(oldContent);
+                while(line = dependentRDD[0]->fn(oldContent)) {
+                    list_add_elem(contentList, computeFunction(line));
+                }
+                */
+                while (1) {
+                    void* line = computeFunction(get_nth_elem(dependentRDD[0]->partitions, partitionIndex)));
+                    if (line)
+                        list_add_elem(contentList, line);
+                    else
+                        break;
+                }
+            } else { // partion with finite regular elements
+                void* line = NULL;
+                List* oldContent = (List*)get_nth_elem(dependentRDD[0]->partitions, partitionIndex);
+                seek_to_start(oldContent);
+                while(line = next(oldContent)) {
+                    list_add_elem(contentList, computeFunction(line));
+                }
             }
         } else if (topTask->rdd->trans == FILTER) {
             // There must be only one dependent RDD
@@ -85,6 +100,7 @@ void pop_and_compute() {
             // There must be two dependent RDD
             void* lineA = NULL;
             void* lineB = NULL;
+            void* newLine = NULL;
             List* oldContentA = (List*)get_nth_elem(dependentRDD[0]->partitions,
                                                     partitionIndex);
             List* oldContentB = (List*)get_nth_elem(dependentRDD[1]->partitions,
@@ -94,10 +110,35 @@ void pop_and_compute() {
             while (lineA = next(oldContentA)) {
                 seek_to_start(oldContentB);
                 while (lineB = next(oldContentB)) {
+                    newLine = computeFunction(lineA, lineB, topTask->rdd->ctx);
+                    list_add_elem(contentList, newLine);
+                }
+            }
+        } else if (topTask->rdd->trans == PARTITIONBY) {
+            // There must be one dependent RDD
+            for (int i = 0; i < dependentRDD[0]->numpartitions; i++) {
+                for (int lineIndex = 0; lineIndex < size(get_nth_elem(dependentRDD[0]->partitions, i)); lineIndex++) {
+                    int repartitionNum = computeFunction(
+                        get_nth_elem(dependentRDD[0]->partitions, lineIndex),
+                        topTask->rdd->numpartitions,
+                        topTask->rdd->ctx
+                    );
+                    if (repartitionNum == partitionIndex) {
+                        list_add_elem(
+                            contentList,
+                            get_nth_elem(dependentRDD[0]->partitions, lineIndex)
+                        );
+                    }
                 }
             }
         }
+
+        pthread_mutex_lock(&(topTask->rdd->partitionListLock));
         topTask->rdd->numComputed++;
+        if(topTask->rdd->partitions == NULL)
+            topTask->rdd->partitions = list_init(1024);
+        list_add_elem(topTask->rdd->partitions, contentList);
+        pthread_mutex_unlock(&(topTask->rdd->partitionListLock));
     }
 }
 

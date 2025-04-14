@@ -106,5 +106,8 @@ void seek_to_start(List* l);
  */
 void free_list(List* l);
 
-void* get_nth_elem(List* l, int n) {
+void* get_nth_elem(List* l, int n);
+
+int get_size(List* l);
+
 #endif  // !__LIST_H__
