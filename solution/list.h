@@ -62,6 +62,18 @@ void list_add_elem(List* l, void* elem);
 void* list_remove_front(List* l);
 
 /**
+ * @brief Creates a new list with elements in reverse order.
+ *
+ * This function allocates and returns a new List structure containing all
+ * elements from the input list but in reverse order. The original list remains
+ * unchanged. The new list will have the same capacity as the original list.
+ *
+ * @param l Pointer to the original list to be reversed.
+ * @return List* Pointer to a newly created list with reversed elements,
+ *         or NULL if the input list is NULL.
+ */
+List* list_reverse(List* l);
+/**
  * @brief Retrieve the current element pointed to by the internal iterator.
  *
  * Returns the element at the current iterator position (`pos`), or NULL if

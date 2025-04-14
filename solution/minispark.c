@@ -1,8 +1,17 @@
 #include "minispark.h"
 
+#include <bits/time.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <time.h>
+
+#include "list.h"
+#include "thread_pool.h"
+
+#define LIST_INIT_CAPACITY 10
+#define CONTENT_INIT_CAPACITY 1024
 
 // Working with metrics...
 // Recording the current time in a `struct timespec`:
@@ -46,6 +55,7 @@ RDD *create_rdd(int numdeps, Transform t, void *fn, ...) {
     rdd->trans = t;
     rdd->fn = fn;
     rdd->partitions = NULL;
+    rdd->numpartitions = maxpartitions;
     return rdd;
 }
 
@@ -101,22 +111,120 @@ RDD *RDDFromFiles(char **filenames, int numfiles) {
 }
 
 void execute(RDD *rdd) {
+    if (rdd->numdependencies == 2) {
+        List *l1 = list_init(LIST_INIT_CAPACITY);
+        List *l2 = list_init(LIST_INIT_CAPACITY);
+        RDD *part1 = rdd->dependencies[0];
+        while (part1->numdependencies != 0) {
+            list_add_elem(l1, part1);
+            part1 = part1->dependencies[0];
+        }
+        list_add_elem(l1, part1);
+        RDD *part2 = rdd->dependencies[1];
+        while (part2->numdependencies != 0) {
+            list_add_elem(l2, part2);
+            part2 = part2->dependencies[0];
+        }
+        list_add_elem(l2, part2);
+        List *all = list_init(l1->size + l2->size);
+        while ((part1 = (RDD *)list_remove_front(l1)) != NULL ||
+               (part2 = (RDD *)list_remove_front(l2)) != NULL) {
+            if (part1) {
+                list_add_elem(all, part1);
+            }
+            if (part2) {
+                list_add_elem(all, part2);
+            }
+        }
+        List *rdds = list_reverse(all);
+        free_list(all);
+        seek_to_start(rdds);
+        RDD *rdd_ptr = NULL;
+        while ((rdd_ptr = next(rdds)) != NULL) {
+            rdd_ptr->partitions = list_init(rdd_ptr->numpartitions);
+            for (int i = 0; i < rdd_ptr->numpartitions; ++i) {
+                List *content = list_init(CONTENT_INIT_CAPACITY);
+                list_add_elem(rdd_ptr->partitions, content);
+                Task *task = (Task *)malloc(sizeof(Task));
+                TaskMetric *metric = (TaskMetric *)malloc(sizeof(TaskMetric));
+                task->rdd = rdd_ptr;
+                task->pnum = i;
+                task->metric = metric;
+                metric->pnum = i;
+                metric->rdd = rdd_ptr;
+                clock_gettime(CLOCK_MONOTONIC, &metric->created);
+                thread_pool_submit(task);
+            }
+        }
+    } else if (rdd->numdependencies == 1) {
+        execute(rdd->dependencies[0]);
+        rdd->partitions = list_init(rdd->numpartitions);
+        for (int i = 0; i < rdd->numpartitions; ++i) {
+            List *content = list_init(CONTENT_INIT_CAPACITY);
+            list_add_elem(rdd->partitions, (void *)content);
+            Task *task = (Task *)malloc(sizeof(Task));
+            TaskMetric *metric = (TaskMetric *)malloc(sizeof(TaskMetric));
+            task->rdd = rdd;
+            task->pnum = i;
+            task->metric = metric;
+            metric->pnum = i;
+            metric->rdd = rdd;
+            clock_gettime(CLOCK_MONOTONIC, &metric->created);
+            thread_pool_submit(task);
+        }
+    } else if (rdd->numdependencies == 0) {
+        rdd->partitions = list_init(rdd->numpartitions);
+        for (int i = 0; i < rdd->numpartitions; ++i) {
+            List *content = list_init(CONTENT_INIT_CAPACITY);
+            list_add_elem(rdd->partitions, (void *)content);
+            Task *task = (Task *)malloc(sizeof(Task));
+            TaskMetric *metric = (TaskMetric *)malloc(sizeof(TaskMetric));
+            task->rdd = rdd;
+            task->pnum = i;
+            task->metric = metric;
+            metric->pnum = i;
+            metric->rdd = rdd;
+            clock_gettime(CLOCK_MONOTONIC, &metric->created);
+            thread_pool_submit(task);
+        }
+    }
     return;
 }
 
 void MS_Run() {
-    return;
+    thread_pool_init(get_num_threads());
 }
 
 void MS_TearDown() {
-    return;
+    thread_pool_destroy();
+}
+
+static void free_RDD_resource(RDD *rdd) {
+    List *curr = NULL;
+    seek_to_start(rdd->partitions);
+    while ((curr = (List *)next(rdd->partitions)) != NULL) {
+        void *item = NULL;
+        seek_to_start(curr);
+        while ((item = next(curr)) != NULL) {
+            free(item);
+        }
+        free_list(curr);
+    }
+    free_list(rdd->partitions);
 }
 
 int count(RDD *rdd) {
     execute(rdd);
 
     int count = 0;
-    // count all the items in rdd
+    List *curr = NULL;
+    seek_to_start(rdd->partitions);
+    while ((curr = (List *)next(rdd->partitions)) != NULL) {
+        count += curr->size;
+    }
+
+    free_RDD_resource(rdd);
+
     return count;
 }
 
@@ -125,4 +233,15 @@ void print(RDD *rdd, Printer p) {
 
     // print all the items in rdd
     // aka... `p(item)` for all items in rdd
+    List *curr = NULL;
+    seek_to_start(rdd->partitions);
+    while ((curr = (List *)next(rdd->partitions)) != NULL) {
+        void *item = NULL;
+        seek_to_start(curr);
+        while ((item = next(curr)) != NULL) {
+            p(item);
+        }
+    }
+
+    free_RDD_resource(rdd);
 }

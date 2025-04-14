@@ -5,7 +5,7 @@
 #include <string.h>
 
 List* list_init(int capacity) {
-    List* l = malloc(sizeof(List));
+    List* l = (List*)malloc(sizeof(List));
     if (l == NULL) {
         perror("malloc");
         exit(EXIT_FAILURE);
@@ -16,6 +16,11 @@ List* list_init(int capacity) {
     l->start = 0;
     l->pos = 0;
     l->data = (void**)malloc(sizeof(void*) * capacity);
+    if (l->data == NULL) {
+        perror("malloc");
+        free((void*)l);
+        exit(EXIT_FAILURE);
+    }
     return l;
 }
 
@@ -61,6 +66,18 @@ void* list_remove_front(List* l) {
     return ret;
 }
 
+List* list_reverse(List* l) {
+    if (!l) {
+        return NULL;
+    }
+    List* new_list = list_init(l->capacity);
+    for (int i = l->size - 1; i >= 0; --i) {
+        list_add_elem(new_list, l->data[(l->start + i) % l->capacity]);
+    }
+
+    return new_list;
+}
+
 void* get_elem(List* l) {
     if (!l || l->size == 0) {
         return NULL;
@@ -90,10 +107,10 @@ void seek_to_start(List* l) {
 }
 
 void free_list(List* l) {
-    if (l->data) {
-        free((void*)l->data);
-    }
     if (l) {
+        if (l->data) {
+            free((void*)l->data);
+        }
         free((void*)l);
     }
 }
