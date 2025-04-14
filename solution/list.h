@@ -20,11 +20,11 @@
  * its current size (number of elements) and its capacity.
  */
 typedef struct List {
-    int size;     /**< Current number of elements in the list */
-    int capacity; /**< Maximum number of elements before needing to grow */
-    int pos;      /**< Internal iterator position used for traversal */
-    int start;    /**< Index of the front element in the ring buffer. */
-    void** data;  /**< Pointer to an array of generic pointers */
+  int size;     /**< Current number of elements in the list */
+  int capacity; /**< Maximum number of elements before needing to grow */
+  int pos;      /**< Internal iterator position used for traversal */
+  int start;    /**< Index of the front element in the ring buffer. */
+  void** data;  /**< Pointer to an array of generic pointers */
 } List;
 
 /**
@@ -106,4 +106,5 @@ void seek_to_start(List* l);
  */
 void free_list(List* l);
 
+void* get_nth_elem(List* l, int n) {
 #endif  // !__LIST_H__

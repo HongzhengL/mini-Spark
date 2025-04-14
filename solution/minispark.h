@@ -6,9 +6,9 @@
 #include "list.h"
 
 #define MAXDEPS (2)
-#define TIME_DIFF_MICROS(start, end)            \
-    (((end.tv_sec - start.tv_sec) * 1000000L) + \
-     ((end.tv_nsec - start.tv_nsec) / 1000L))
+#define TIME_DIFF_MICROS(start, end)          \
+  (((end.tv_sec - start.tv_sec) * 1000000L) + \
+   ((end.tv_nsec - start.tv_nsec) / 1000L))
 
 struct RDD;
 struct List;
@@ -27,30 +27,32 @@ typedef void (*Printer)(void* arg);
 typedef enum { MAP, FILTER, JOIN, PARTITIONBY, FILE_BACKED } Transform;
 
 struct RDD {
-    Transform trans;   // transform type, see enum
-    void* fn;          // transformation function
-    void* ctx;         // used by minispark lib functions
-    List* partitions;  // list of partitions
+  Transform trans;   // transform type, see enum
+  void* fn;          // transformation function
+  void* ctx;         // used by minispark lib functions
+  List* partitions;  // list of partitions
 
-    RDD* dependencies[MAXDEPS];
-    int numdependencies;  // 0, 1, or 2
+  RDD* dependencies[MAXDEPS];
+  int numdependencies;  // 0, 1, or 2
 
-    // you may want extra data members here
-    int numpartitions;
+  // you may want extra data members here
+  int numpartitions;
+  int numComputed;
+  pthread_mutex_t* partitionListLock;
 };
 
 typedef struct {
-    struct timespec created;
-    struct timespec scheduled;
-    size_t duration;  // in usec
-    RDD* rdd;
-    int pnum;
+  struct timespec created;
+  struct timespec scheduled;
+  size_t duration;  // in usec
+  RDD* rdd;
+  int pnum;
 } TaskMetric;
 
 typedef struct {
-    RDD* rdd;
-    int pnum;
-    TaskMetric* metric;
+  RDD* rdd;
+  int pnum;
+  TaskMetric* metric;
 } Task;
 
 //////// actions ////////
