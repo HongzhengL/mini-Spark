@@ -64,7 +64,7 @@ static void do_computation(Task* topTask) {
             if (dependentRDD[0]->trans ==
                 FILE_BACKED) {  // partition with a single FilePointer inside
                 while (1) {
-                    void* line = ((Mapper)(computeFunction))(get_nth_elem(dependentRDD[0]->partitions, partitionIndex)));
+                    void* line = ((Mapper)(computeFunction))(get_nth_elem(dependentRDD[0]->partitions, partitionIndex));
                     if (line)
                         list_add_elem(contentList, line);
                     else
