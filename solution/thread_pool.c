@@ -37,8 +37,105 @@ int get_num_threads() {
     return CPU_COUNT(&set);
 }
 
-static void do_computation(Task* task) {
-    // TODO
+static void do_computation(Task* topTask) {
+    bool waitDependencies = true;
+
+    int partitionIndex = topTask->pnum;
+    void* computeFunction = topTask->rdd->fn;
+    RDD** dependentRDD = topTask->rdd->dependencies;
+    if (topTask) {
+        // spin until dependencies get computed
+        while (waitDependencies) {
+            waitDependencies = false;
+            for (int i = 0; i < topTask->rdd->numdependencies; i++) {
+                if (dependentRDD[i]->numComputed <
+                    dependentRDD[i]->numpartitions) {
+                    waitDependencies = true;
+                }
+            }
+        }
+
+        // All new results of the partitions[partitionIndex] are stored in this contentList
+        List* contentList = list_init(QUEUE_CAPACITY);
+
+        if (topTask->rdd->trans == MAP) {
+            // There must be only one dependent RDD
+            if (dependentRDD[0]->trans == FILE_BACKED) {  // partition with a single FilePointer inside
+                while (1) {
+                    void* line = computeFunction(get_nth_elem(dependentRDD[0]->partitions, partitionIndex)));
+                    if (line)
+                        list_add_elem(contentList, line);
+                    else
+                        break;
+                }
+            } else {  // partion with finite regular elements
+                void* line = NULL;
+                List* oldContent = (List*)get_nth_elem(
+                    dependentRDD[0]->partitions, 
+                    partitionIndex
+                );
+                seek_to_start(oldContent);
+                while (line = next(oldContent)) {
+                    list_add_elem(contentList, computeFunction(line));
+                }
+            }
+        } else if (topTask->rdd->trans == FILTER) {
+            // There must be only one dependent RDD
+            void* line = NULL;
+            List* oldContent = (List*)get_nth_elem(dependentRDD[0]->partitions,
+                                                   partitionIndex);
+            seek_to_start(oldContent);
+            while (line = next(oldContent)) {
+                if (computeFunction(line, topTask->rdd->ctx)) {
+                    list_add_elem(contentList, line);
+                }
+            }
+        } else if (topTask->rdd->trans == JOIN) {
+            // There must be two dependent RDD
+            void* lineA = NULL;
+            void* lineB = NULL;
+            void* newLine = NULL;
+            List* oldContentA = (List*)get_nth_elem(dependentRDD[0]->partitions,
+                                                    partitionIndex);
+            List* oldContentB = (List*)get_nth_elem(dependentRDD[1]->partitions,
+                                                    partitionIndex);
+
+            seek_to_start(oldContentA);
+            while (lineA = next(oldContentA)) {
+                seek_to_start(oldContentB);
+                while (lineB = next(oldContentB)) {
+                    newLine = computeFunction(lineA, lineB, topTask->rdd->ctx);
+                    list_add_elem(contentList, newLine);
+                }
+            }
+        } else if (topTask->rdd->trans == PARTITIONBY) {
+            // There must be one dependent RDD
+            for (int i = 0; i < dependentRDD[0]->numpartitions; i++) {
+                for (int lineIndex = 0;
+                     lineIndex <
+                     size(get_nth_elem(dependentRDD[0]->partitions, i));
+                     lineIndex++) {
+                    int repartitionNum = computeFunction(
+                        get_nth_elem(dependentRDD[0]->partitions, lineIndex),
+                        topTask->rdd->numpartitions, topTask->rdd->ctx);
+                    if (repartitionNum == partitionIndex) {
+                        list_add_elem(contentList,
+                                      get_nth_elem(dependentRDD[0]->partitions,
+                                                   lineIndex));
+                    }
+                }
+            }
+        }
+
+        // update the result partitions for this RDD
+        pthread_mutex_lock(&(topTask->rdd->partitionListLock));
+        topTask->rdd->numComputed++;
+        if (topTask->rdd->partitions == NULL)
+            topTask->rdd->partitions = list_init(QUEUE_CAPACITY);
+        if (get_size(contentList)) // To handle root node (FILE_BACKED)
+            list_add_elem(topTask->rdd->partitions, contentList);
+        pthread_mutex_unlock(&(topTask->rdd->partitionListLock));
+    }
 }
 
 void* consumer(void* arg) {

@@ -56,6 +56,8 @@ RDD *create_rdd(int numdeps, Transform t, void *fn, ...) {
     rdd->fn = fn;
     rdd->partitions = NULL;
     rdd->numpartitions = maxpartitions;
+    rdd->numComputed = 0;
+    pthread_mutex_init(&(rdd->partitionListLock), NULL);
     return rdd;
 }
 
@@ -105,7 +107,7 @@ RDD *RDDFromFiles(char **filenames, int numfiles) {
     }
 
     rdd->numdependencies = 0;
-    rdd->trans = MAP;
+    rdd->trans = FILE_BACKED;
     rdd->fn = (void *)identity;
     return rdd;
 }

@@ -38,7 +38,7 @@ struct RDD {
     // you may want extra data members here
     int numpartitions;
     int numComputed;
-    pthread_mutex_t* partitionListLock;
+    pthread_mutex_t partitionListLock;
 };
 
 typedef struct {
