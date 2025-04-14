@@ -55,12 +55,14 @@ static void do_computation(Task* topTask) {
             }
         }
 
-        // All new results of the partitions[partitionIndex] are stored in this contentList
+        // All new results of the partitions[partitionIndex] are stored in this
+        // contentList
         List* contentList = list_init(QUEUE_CAPACITY);
 
         if (topTask->rdd->trans == MAP) {
             // There must be only one dependent RDD
-            if (dependentRDD[0]->trans == FILE_BACKED) {  // partition with a single FilePointer inside
+            if (dependentRDD[0]->trans ==
+                FILE_BACKED) {  // partition with a single FilePointer inside
                 while (1) {
                     void* line = computeFunction(get_nth_elem(dependentRDD[0]->partitions, partitionIndex)));
                     if (line)
@@ -71,9 +73,7 @@ static void do_computation(Task* topTask) {
             } else {  // partion with finite regular elements
                 void* line = NULL;
                 List* oldContent = (List*)get_nth_elem(
-                    dependentRDD[0]->partitions, 
-                    partitionIndex
-                );
+                    dependentRDD[0]->partitions, partitionIndex);
                 seek_to_start(oldContent);
                 while (line = next(oldContent)) {
                     list_add_elem(contentList, computeFunction(line));
@@ -132,7 +132,7 @@ static void do_computation(Task* topTask) {
         topTask->rdd->numComputed++;
         if (topTask->rdd->partitions == NULL)
             topTask->rdd->partitions = list_init(QUEUE_CAPACITY);
-        if (get_size(contentList)) // To handle root node (FILE_BACKED)
+        if (get_size(contentList))  // To handle root node (FILE_BACKED)
             list_add_elem(topTask->rdd->partitions, contentList);
         pthread_mutex_unlock(&(topTask->rdd->partitionListLock));
     }
