@@ -76,7 +76,8 @@ static void do_computation(Task* topTask) {
                     dependentRDD[0]->partitions, partitionIndex);
                 seek_to_start(oldContent);
                 while (line = next(oldContent)) {
-                    list_add_elem(contentList, ((Mapper)(computeFunction))(line));
+                    list_add_elem(contentList,
+                                  ((Mapper)(computeFunction))(line));
                 }
             }
         } else if (topTask->rdd->trans == FILTER) {
@@ -104,7 +105,8 @@ static void do_computation(Task* topTask) {
             while (lineA = next(oldContentA)) {
                 seek_to_start(oldContentB);
                 while (lineB = next(oldContentB)) {
-                    newLine = ((Joiner)(computeFunction))(lineA, lineB, topTask->rdd->ctx);
+                    newLine = ((Joiner)(computeFunction))(lineA, lineB,
+                                                          topTask->rdd->ctx);
                     list_add_elem(contentList, newLine);
                 }
             }
