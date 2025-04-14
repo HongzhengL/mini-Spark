@@ -37,7 +37,7 @@ int get_num_threads() {
     return CPU_COUNT(&set);
 }
 
-void do_computation(Task* task) {
+static void do_computation(Task* task) {
     // TODO
 }
 
@@ -51,8 +51,12 @@ void* consumer(void* arg) {
         --pool.num_task;
         pthread_cond_signal(&pool.queue_not_full);
         pthread_mutex_unlock(&pool.queue_lock);
+        if (task->rdd == NULL) {
+            break;
+        }
         do_computation(task);
     }
+    return NULL;
 }
 
 void thread_pool_init(int numthreads) {
@@ -74,9 +78,6 @@ void thread_pool_init(int numthreads) {
 }
 
 void thread_pool_destroy() {
-    for (int i = 0; i < pool.num_thread; i++) {
-        pthread_join(pool.threads[i], NULL);
-    }
     free(pool.threads);
     pthread_mutex_destroy(&pool.queue_lock);
     pthread_cond_destroy(&pool.queue_not_empty);
@@ -84,7 +85,14 @@ void thread_pool_destroy() {
 }
 
 void thread_pool_wait() {
-    // TODO
+    for (int i = 0; i < pool.num_thread; ++i) {
+        Task* task = (Task*)malloc(sizeof(Task));
+        task->rdd = NULL;
+        thread_pool_submit(task);
+    }
+    for (int i = 0; i < pool.num_thread; ++i) {
+        pthread_join(pool.threads[i], NULL);
+    }
 }
 
 void thread_pool_submit(Task* task) {
