@@ -76,7 +76,7 @@ static void do_computation(Task* topTask) {
                 List* oldContent = (List*)get_nth_elem(
                     dependentRDD[0]->partitions, partitionIndex);
                 seek_to_start(oldContent);
-                while (line = next(oldContent)) {
+                while ((line = next(oldContent))) {
                     list_add_elem(contentList,
                                   ((Mapper)(computeFunction))(line));
                 }
@@ -87,7 +87,7 @@ static void do_computation(Task* topTask) {
             List* oldContent = (List*)get_nth_elem(dependentRDD[0]->partitions,
                                                    partitionIndex);
             seek_to_start(oldContent);
-            while (line = next(oldContent)) {
+            while ((line = next(oldContent))) {
                 if (((Filter)(computeFunction))(line, topTask->rdd->ctx)) {
                     list_add_elem(contentList, line);
                 }
@@ -103,9 +103,9 @@ static void do_computation(Task* topTask) {
                                                     partitionIndex);
 
             seek_to_start(oldContentA);
-            while (lineA = next(oldContentA)) {
+            while ((lineA = next(oldContentA))) {
                 seek_to_start(oldContentB);
-                while (lineB = next(oldContentB)) {
+                while ((lineB = next(oldContentB))) {
                     newLine = ((Joiner)(computeFunction))(lineA, lineB,
                                                           topTask->rdd->ctx);
                     list_add_elem(contentList, newLine);
