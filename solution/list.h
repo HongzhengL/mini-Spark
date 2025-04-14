@@ -122,4 +122,6 @@ void* get_nth_elem(List* l, int n);
 
 int get_size(List* l);
 
+void list_insert_at(List* l, void* elem, int idx);
+
 #endif  // !__LIST_H__
