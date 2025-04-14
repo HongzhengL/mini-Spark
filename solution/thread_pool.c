@@ -91,7 +91,7 @@ static void do_computation(Task* topTask) {
                 }
             }
         } else if (topTask->rdd->trans == JOIN) {
-            // There must be two dependent RDD
+            // There must be two dependent RDDs
             void* lineA = NULL;
             void* lineB = NULL;
             void* newLine = NULL;
@@ -113,7 +113,7 @@ static void do_computation(Task* topTask) {
             for (int i = 0; i < dependentRDD[0]->numpartitions; i++) {
                 for (int lineIndex = 0;
                      lineIndex <
-                     size(get_nth_elem(dependentRDD[0]->partitions, i));
+                     get_size(get_nth_elem(dependentRDD[0]->partitions, i));
                      lineIndex++) {
                     int repartitionNum = computeFunction(
                         get_nth_elem(dependentRDD[0]->partitions, lineIndex),
