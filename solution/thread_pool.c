@@ -135,8 +135,10 @@ static void do_computation(Task *topTask) {
         topTask->rdd->numComputed++;
         if (topTask->rdd->partitions == NULL)
             topTask->rdd->partitions = list_init(topTask->rdd->numpartitions);
-        if (get_size(contentList))  // To handle root node (FILE_BACKED)
-            list_add_elem(topTask->rdd->partitions, contentList);
+        if (get_size(contentList)) {  // To handle root node (FILE_BACKED)
+            list_insert_at(topTask->rdd->partitions, contentList,
+                           partitionIndex);
+        }
         pthread_mutex_unlock(&(topTask->rdd->partitionListLock));
     }
 }
