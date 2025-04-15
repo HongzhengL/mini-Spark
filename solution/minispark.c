@@ -119,80 +119,43 @@ RDD *RDDFromFiles(char **filenames, int numfiles) {
     return rdd;
 }
 
+static List *get_tasks_list(RDD *rdd) {
+    List *queue = list_init(LIST_INIT_CAPACITY);
+    List *rdd_list = list_init(LIST_INIT_CAPACITY);
+
+    list_add_elem(queue, rdd);
+    list_add_elem(rdd_list, rdd);
+    while (get_size(queue) != 0) {
+        RDD *curr = list_remove_front(queue);
+        for (int i = 0; i < curr->numdependencies; ++i) {
+            list_add_elem(queue, curr->dependencies[i]);
+            list_add_elem(rdd_list, curr->dependencies[i]);
+        }
+    }
+
+    List *rev = list_reverse(rdd_list);
+    free_list(rdd_list);
+
+    return rev;
+}
+
 void execute(RDD *rdd) {
-    if (rdd->numdependencies == 2) {
-        List *l1 = list_init(LIST_INIT_CAPACITY);
-        List *l2 = list_init(LIST_INIT_CAPACITY);
-        RDD *part1 = rdd->dependencies[0];
-        while (part1->numdependencies != 0) {
-            list_add_elem(l1, part1);
-            part1 = part1->dependencies[0];
-        }
-        list_add_elem(l1, part1);
-        RDD *part2 = rdd->dependencies[1];
-        while (part2->numdependencies != 0) {
-            list_add_elem(l2, part2);
-            part2 = part2->dependencies[0];
-        }
-        list_add_elem(l2, part2);
-        List *all = list_init(l1->size + l2->size);
-        part1 = (RDD *)list_remove_front(l1);
-        part2 = (RDD *)list_remove_front(l2);
-        while (part1 != NULL || part2 != NULL) {
-            if (part1) {
-                list_add_elem(all, part1);
-            }
-            if (part2) {
-                list_add_elem(all, part2);
-            }
-            part1 = (RDD *)list_remove_front(l1);
-            part2 = (RDD *)list_remove_front(l2);
-        }
-        List *rdds = list_reverse(all);
-        list_add_elem(rdds, rdd);
-        free_list(all);
-        seek_to_start(rdds);
-        RDD *rdd_ptr = NULL;
-        while ((rdd_ptr = next(rdds)) != NULL) {
-            for (int i = 0; i < rdd_ptr->numpartitions; ++i) {
-                Task *task = (Task *)malloc(sizeof(Task));
-                TaskMetric *metric = (TaskMetric *)malloc(sizeof(TaskMetric));
-                task->rdd = rdd_ptr;
-                task->pnum = i;
-                task->metric = metric;
-                metric->pnum = i;
-                metric->rdd = rdd_ptr;
-                clock_gettime(CLOCK_MONOTONIC, &metric->created);
-                thread_pool_submit(task);
-            }
-        }
-    } else if (rdd->numdependencies == 1) {
-        execute(rdd->dependencies[0]);
-        for (int i = 0; i < rdd->numpartitions; ++i) {
+    List *rdds = get_tasks_list(rdd);
+    seek_to_start(rdds);
+    RDD *rdd_ptr = NULL;
+    while ((rdd_ptr = next(rdds)) != NULL) {
+        for (int i = 0; i < rdd_ptr->numpartitions; ++i) {
             Task *task = (Task *)malloc(sizeof(Task));
             TaskMetric *metric = (TaskMetric *)malloc(sizeof(TaskMetric));
-            task->rdd = rdd;
+            task->rdd = rdd_ptr;
             task->pnum = i;
             task->metric = metric;
             metric->pnum = i;
-            metric->rdd = rdd;
-            clock_gettime(CLOCK_MONOTONIC, &metric->created);
-            thread_pool_submit(task);
-        }
-    } else if (rdd->numdependencies == 0) {
-        for (int i = 0; i < rdd->numpartitions; ++i) {
-            Task *task = (Task *)malloc(sizeof(Task));
-            TaskMetric *metric = (TaskMetric *)malloc(sizeof(TaskMetric));
-            task->rdd = rdd;
-            task->pnum = i;
-            task->metric = metric;
-            metric->pnum = i;
-            metric->rdd = rdd;
+            metric->rdd = rdd_ptr;
             clock_gettime(CLOCK_MONOTONIC, &metric->created);
             thread_pool_submit(task);
         }
     }
-    return;
 }
 
 void MS_Run() {
