@@ -24,7 +24,7 @@ List* list_init(int capacity) {
         exit(EXIT_FAILURE);
     }
     for (int i = 0; i < capacity; ++i) {
-        l->data[0] = NULL;
+        l->data[i] = NULL;
     }
     return l;
 }
@@ -134,7 +134,7 @@ void list_insert_at(List* l, void* elem, int idx) {
             return;
         }
         if (l->data[((l->start) + idx) % l->capacity] == NULL) {
-            ++l->size;
+            ++(l->size);
         }
         l->data[((l->start) + idx) % l->capacity] = elem;
     }
