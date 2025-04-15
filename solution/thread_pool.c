@@ -112,7 +112,9 @@ static void do_computation(Task *topTask) {
                 while ((lineB = next(oldContentB))) {
                     newLine = ((Joiner)(computeFunction))(lineA, lineB,
                                                           topTask->rdd->ctx);
-                    list_add_elem(contentList, newLine);
+                    if (newLine) {
+                        list_add_elem(contentList, newLine);
+                    }
                 }
             }
         } else if (topTask->rdd->trans == PARTITIONBY) {

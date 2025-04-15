@@ -136,16 +136,20 @@ void execute(RDD *rdd) {
         }
         list_add_elem(l2, part2);
         List *all = list_init(l1->size + l2->size);
-        while ((part1 = (RDD *)list_remove_front(l1)) != NULL ||
-               (part2 = (RDD *)list_remove_front(l2)) != NULL) {
+        part1 = (RDD *)list_remove_front(l1);
+        part2 = (RDD *)list_remove_front(l2);
+        while (part1 != NULL || part2 != NULL) {
             if (part1) {
                 list_add_elem(all, part1);
             }
             if (part2) {
                 list_add_elem(all, part2);
             }
+            part1 = (RDD *)list_remove_front(l1);
+            part2 = (RDD *)list_remove_front(l2);
         }
         List *rdds = list_reverse(all);
+        list_add_elem(rdds, rdd);
         free_list(all);
         seek_to_start(rdds);
         RDD *rdd_ptr = NULL;
