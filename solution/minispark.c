@@ -112,6 +112,7 @@ RDD *RDDFromFiles(char **filenames, int numfiles) {
     rdd->trans = FILE_BACKED;
     rdd->fn = (void *)identity;
     rdd->numpartitions = numfiles;
+    rdd->numComputed = 0;
     pthread_mutex_init(&(rdd->partitionListLock), NULL);
     return rdd;
 }
