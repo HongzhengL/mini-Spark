@@ -1,6 +1,7 @@
 #include "minispark.h"
 
 #include <bits/time.h>
+#include <pthread.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -12,6 +13,12 @@
 
 #define LIST_INIT_CAPACITY 10
 #define CONTENT_INIT_CAPACITY 1024
+
+const char *LOG_FILE = "metrics.log";
+
+MetricQueue *metric_queue;
+
+pthread_t metric_thread;
 
 // Working with metrics...
 // Recording the current time in a `struct timespec`:
@@ -156,13 +163,63 @@ void execute(RDD *rdd) {
     }
 }
 
+void *metric_thread_func(void *arg) {
+    FILE *fp = (FILE *)arg;
+    while (1) {
+        pthread_mutex_lock(&metric_queue->queue_lock);
+        while (metric_queue->queue->size == 0) {
+            pthread_cond_wait(&metric_queue->queue_not_empty,
+                              &metric_queue->queue_lock);
+        }
+        TaskMetric *metric = (TaskMetric *)list_remove_front(metric_queue->queue);
+        pthread_cond_signal(&metric_queue->queue_not_full);
+        pthread_mutex_unlock(&metric_queue->queue_lock);
+        if (metric->rdd == NULL) {
+            fclose(fp);
+            // free(metric);
+            break;
+        } else {
+            print_formatted_metric(metric, fp);
+            // free(metric);
+        }
+    }
+    return NULL;
+}
+
 void MS_Run() {
     thread_pool_init(get_num_threads());
-    // thread_pool_init(1);
+    metric_queue = (MetricQueue *)malloc(sizeof(MetricQueue));
+    metric_queue->queue = list_init(METRIC_QUEUE_CAPACITY);
+    pthread_mutex_init(&metric_queue->queue_lock, NULL);
+    pthread_cond_init(&metric_queue->queue_not_empty, NULL);
+    pthread_cond_init(&metric_queue->queue_not_full, NULL);
+
+    FILE *fp = fopen(LOG_FILE, "w");
+    if (fp == NULL) {
+        perror("fopen");
+        exit(EXIT_FAILURE);
+    }
+    if (pthread_create(&metric_thread, NULL, metric_thread_func, fp) != 0) {
+        perror("pthread_create");
+        fclose(fp);
+        exit(EXIT_FAILURE);
+    }
 }
 
 void MS_TearDown() {
     thread_pool_destroy();
+    TaskMetric *metric = (TaskMetric *)malloc(sizeof(TaskMetric));
+    metric->rdd = NULL;
+    pthread_mutex_lock(&metric_queue->queue_lock);
+    while (metric_queue->queue->size == METRIC_QUEUE_CAPACITY) {
+        pthread_cond_wait(&metric_queue->queue_not_full,
+                          &metric_queue->queue_lock);
+    }
+    list_add_elem(metric_queue->queue, metric);
+    pthread_cond_signal(&metric_queue->queue_not_empty);
+    pthread_mutex_unlock(&metric_queue->queue_lock);
+    pthread_join(metric_thread, NULL);
+    // free_list(metric_list);
 }
 
 static void free_RDD_resource(RDD *rdd) {
@@ -172,11 +229,24 @@ static void free_RDD_resource(RDD *rdd) {
         void *item = NULL;
         seek_to_start(curr);
         while ((item = next(curr)) != NULL) {
-            free(item);
+            // free(item);
         }
         free_list(curr);
     }
     free_list(rdd->partitions);
+}
+
+static void free_All_RDD(RDD *rdd) {
+    List *rdds = get_tasks_list(rdd);
+    seek_to_start(rdds);
+    RDD *rdd_ptr = NULL;
+    while ((rdd_ptr = next(rdds)) != NULL) {
+        if (rdd_ptr->numdependencies != 0) {
+            free_RDD_resource(rdd_ptr);
+        }
+        free(rdd_ptr);
+    }
+    free_list(rdds);
 }
 
 int count(RDD *rdd) {
@@ -190,7 +260,7 @@ int count(RDD *rdd) {
         count += curr->size;
     }
 
-    free_RDD_resource(rdd);
+    // free_All_RDD(rdd);
 
     return count;
 }
@@ -215,5 +285,5 @@ void print(RDD *rdd, Printer p) {
         }
     }
 
-    free_RDD_resource(rdd);
+    // free_All_RDD(rdd);
 }

@@ -2,11 +2,13 @@
 #include "thread_pool.h"
 
 #include <assert.h>
+#include <bits/time.h>
 #include <pthread.h>
 #include <sched.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 
 #include "list.h"
 #include "minispark.h"
@@ -38,7 +40,12 @@ int get_num_threads() {
     return CPU_COUNT(&set);
 }
 
+extern MetricQueue *metric_queue;
+
 static void do_computation(Task *topTask) {
+    struct timespec start;
+    struct timespec end;
+    clock_gettime(CLOCK_MONOTONIC, &start);
     bool waitDependencies = true;
 
     int partitionIndex = topTask->pnum;
@@ -153,6 +160,16 @@ static void do_computation(Task *topTask) {
         topTask->rdd->numComputed++;
         pthread_mutex_unlock(&(topTask->rdd->partitionListLock));
     }
+    clock_gettime(CLOCK_MONOTONIC, &end);
+    topTask->metric->duration = TIME_DIFF_MICROS(start, end);
+    pthread_mutex_lock(&metric_queue->queue_lock);
+    while (metric_queue->queue->size == METRIC_QUEUE_CAPACITY) {
+        pthread_cond_wait(&metric_queue->queue_not_full,
+                          &metric_queue->queue_lock);
+    }
+    list_add_elem(metric_queue->queue, topTask->metric);
+    pthread_cond_signal(&metric_queue->queue_not_empty);
+    pthread_mutex_unlock(&metric_queue->queue_lock);
 }
 
 void *consumer(void *arg) {
@@ -168,6 +185,7 @@ void *consumer(void *arg) {
         if (task->rdd == NULL) {
             break;
         }
+        clock_gettime(CLOCK_MONOTONIC, &task->metric->scheduled);
         do_computation(task);
     }
     return NULL;
