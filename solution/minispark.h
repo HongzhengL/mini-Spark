@@ -58,7 +58,7 @@ typedef struct {
 } Task;
 
 typedef struct MetricQueue {
-    List *queue;
+    List* queue;
     pthread_mutex_t queue_lock;
     pthread_cond_t queue_not_empty;
     pthread_cond_t queue_not_full;
