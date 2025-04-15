@@ -127,12 +127,16 @@ static void do_computation(Task *topTask) {
                      get_size(get_nth_elem(dependentRDD[0]->partitions, i));
                      lineIndex++) {
                     int repartitionNum = ((Partitioner)(computeFunction))(
-                        get_nth_elem(get_nth_elem(dependentRDD[0]->partitions, i), lineIndex),
+                        get_nth_elem(
+                            get_nth_elem(dependentRDD[0]->partitions, i),
+                            lineIndex),
                         topTask->rdd->numpartitions, topTask->rdd->ctx);
                     if (repartitionNum == partitionIndex) {
-                        list_add_elem(contentList,
-                                      get_nth_elem(get_nth_elem(dependentRDD[0]->partitions, i),
-                                                   lineIndex));
+                        list_add_elem(
+                            contentList,
+                            get_nth_elem(
+                                get_nth_elem(dependentRDD[0]->partitions, i),
+                                lineIndex));
                     }
                 }
             }
