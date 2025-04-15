@@ -49,8 +49,12 @@ static void do_computation(Task *topTask) {
         while (waitDependencies) {
             waitDependencies = false;
             for (int i = 0; i < topTask->rdd->numdependencies; i++) {
-                if (dependentRDD[i]->numComputed <
-                    dependentRDD[i]->numpartitions) {
+                pthread_mutex_lock(&(dependentRDD[i]->partitionListLock));
+                int computed = dependentRDD[i]->numComputed;
+                int total = dependentRDD[i]->numpartitions;
+                pthread_mutex_unlock(&(dependentRDD[i]->partitionListLock));
+
+                if (computed < total) {
                     waitDependencies = true;
                 }
             }
