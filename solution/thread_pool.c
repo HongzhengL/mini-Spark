@@ -89,10 +89,7 @@ static void do_computation(Task *topTask) {
                                                     partitionIndex);
             seek_to_start(oldContent);
             while ((line = next(oldContent))) {
-                // fprintf(stderr, "from thread_pool.c@91: .%s.\n", line);
                 if (((Filter)(computeFunction))(line, topTask->rdd->ctx)) {
-                    // fprintf(stderr, "from thread_pool.c@91: accepts.%s.\n",
-                    //         line);
                     list_add_elem(contentList, line);
                 }
             }

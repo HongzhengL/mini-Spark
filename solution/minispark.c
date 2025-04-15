@@ -101,21 +101,18 @@ RDD *RDDFromFiles(char **filenames, int numfiles) {
 
     for (int i = 0; i < numfiles; i++) {
         FILE *fp = fopen(filenames[i], "r");
-        // fprintf(stderr, "from minispark.c@102 FP Addr: %s.|.%p\n",
-        // filenames[i], fp);
         if (fp == NULL) {
             perror("fopen");
             exit(1);
         }
         list_add_elem(rdd->partitions, fp);
-        // fprintf(stderr, "from minispark.c@108 FP Addr: %s.|.%p\n",
-        // filenames[i], get_nth_elem(rdd->partitions, i));
     }
 
     rdd->numdependencies = 0;
     rdd->trans = FILE_BACKED;
     rdd->fn = (void *)identity;
     rdd->numpartitions = numfiles;
+    pthread_mutex_init(&(rdd->partitionListLock), NULL);
     return rdd;
 }
 
@@ -160,7 +157,7 @@ void execute(RDD *rdd) {
 
 void MS_Run() {
     thread_pool_init(get_num_threads());
-    // thread_pool_init(6);
+    //thread_pool_init(1);
 }
 
 void MS_TearDown() {
