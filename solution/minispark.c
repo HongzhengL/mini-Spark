@@ -158,7 +158,7 @@ void execute(RDD *rdd) {
 
 void MS_Run() {
     thread_pool_init(get_num_threads());
-    // thread_pool_init(1);
+    //thread_pool_init(1);
 }
 
 void MS_TearDown() {

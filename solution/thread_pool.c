@@ -121,16 +121,17 @@ static void do_computation(Task *topTask) {
         } else if (topTask->rdd->trans == PARTITIONBY) {
             // There must be one dependent RDD
             for (int i = 0; i < dependentRDD[0]->numpartitions; i++) {
+                assert(dependentRDD[0]->partitions != NULL);
                 for (int lineIndex = 0;
                      lineIndex <
                      get_size(get_nth_elem(dependentRDD[0]->partitions, i));
                      lineIndex++) {
                     int repartitionNum = ((Partitioner)(computeFunction))(
-                        get_nth_elem(dependentRDD[0]->partitions, lineIndex),
+                        get_nth_elem(get_nth_elem(dependentRDD[0]->partitions, i), lineIndex),
                         topTask->rdd->numpartitions, topTask->rdd->ctx);
                     if (repartitionNum == partitionIndex) {
                         list_add_elem(contentList,
-                                      get_nth_elem(dependentRDD[0]->partitions,
+                                      get_nth_elem(get_nth_elem(dependentRDD[0]->partitions, i),
                                                    lineIndex));
                     }
                 }
