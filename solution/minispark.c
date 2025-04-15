@@ -171,8 +171,7 @@ void *metric_thread_func(void *arg) {
             pthread_cond_wait(&metric_queue->queue_not_empty,
                               &metric_queue->queue_lock);
         }
-        TaskMetric *metric =
-            (TaskMetric *)list_remove_front(metric_queue->queue);
+        TaskMetric *metric = (TaskMetric *)list_remove_front(metric_queue->queue);
         pthread_cond_signal(&metric_queue->queue_not_full);
         pthread_mutex_unlock(&metric_queue->queue_lock);
         if (metric->rdd == NULL) {
@@ -220,7 +219,6 @@ void MS_TearDown() {
     pthread_cond_signal(&metric_queue->queue_not_empty);
     pthread_mutex_unlock(&metric_queue->queue_lock);
     pthread_join(metric_thread, NULL);
-    // free_list(metric_list);
 }
 
 static void free_RDD_resource(RDD *rdd) {

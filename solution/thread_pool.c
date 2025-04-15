@@ -1,7 +1,6 @@
 #define _GNU_SOURCE
 #include "thread_pool.h"
 
-#include <assert.h>
 #include <bits/time.h>
 #include <pthread.h>
 #include <sched.h>
@@ -128,7 +127,6 @@ static void do_computation(Task *topTask) {
         } else if (topTask->rdd->trans == PARTITIONBY) {
             // There must be one dependent RDD
             for (int i = 0; i < dependentRDD[0]->numpartitions; i++) {
-                assert(dependentRDD[0]->partitions != NULL);
                 for (int lineIndex = 0;
                      lineIndex <
                      get_size(get_nth_elem(dependentRDD[0]->partitions, i));

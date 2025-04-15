@@ -1,6 +1,5 @@
 #include "list.h"
 
-#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -12,7 +11,6 @@ List* list_init(int capacity) {
         exit(EXIT_FAILURE);
     }
 
-    assert(capacity > 0);
     l->capacity = capacity;
     l->size = 0;
     l->start = 0;
