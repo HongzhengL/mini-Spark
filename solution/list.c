@@ -105,8 +105,7 @@ void* next(List* l) {
     return elem;
 }
 
-__attribute__((no_sanitize("thread")))
-void seek_to_start(List* l) {
+__attribute__((no_sanitize("thread"))) void seek_to_start(List* l) {
     if (l) {
         l->pos = 0;
     }
