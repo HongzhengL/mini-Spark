@@ -53,7 +53,9 @@ void* GetLines(void* arg) {
 
   char *line = NULL;
   size_t size = 0;
+  //fprintf(stderr, "from lib.c@60 FP Addr: %p\n", arg);
   
+  assert(fp != NULL);
   if (getline(&line, &size, fp) < 0) {
     free(line);
     return NULL;

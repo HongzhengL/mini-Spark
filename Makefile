@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -Wall -Wextra -Og -g -pthread -I$(SOL_DIR) -I$(LIB_DIR)
+CFLAGS = -Wall -Wextra -O0 -ggdb -pthread -I$(SOL_DIR) -I$(LIB_DIR)
 
 APP_DIR = applications
 LIB_DIR = lib
@@ -8,7 +8,7 @@ BIN_DIR = bin
 
 PROGRAMS = linecount cat grep grepcount sumjoin concurrency
 
-MS_OBJS = $(SOL_DIR)/minispark.o  #Put .o files 
+MS_OBJS = $(SOL_DIR)/minispark.o $(SOL_DIR)/list.o $(SOL_DIR)/thread_pool.o
 
 OBJS = $(MS_OBJS) $(LIB_DIR)/lib.o
 BINS = $(PROGRAMS:%=$(BIN_DIR)/%)

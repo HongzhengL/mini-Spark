@@ -10,6 +10,7 @@
 #define ROUNDS 9
 #define NUMFILES (1<<ROUNDS)
 
+__attribute__((no_sanitize("thread")))
 int main() {
 
 

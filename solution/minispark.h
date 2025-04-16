@@ -3,10 +3,14 @@
 
 #include <pthread.h>
 
+#include "list.h"
+
 #define MAXDEPS (2)
 #define TIME_DIFF_MICROS(start, end)            \
     (((end.tv_sec - start.tv_sec) * 1000000L) + \
      ((end.tv_nsec - start.tv_nsec) / 1000L))
+
+#define METRIC_QUEUE_CAPACITY 1024
 
 struct RDD;
 struct List;
@@ -34,6 +38,9 @@ struct RDD {
     int numdependencies;  // 0, 1, or 2
 
     // you may want extra data members here
+    int numpartitions;
+    int numComputed;
+    pthread_mutex_t partitionListLock;
 };
 
 typedef struct {
@@ -49,6 +56,13 @@ typedef struct {
     int pnum;
     TaskMetric* metric;
 } Task;
+
+typedef struct MetricQueue {
+    List* queue;
+    pthread_mutex_t queue_lock;
+    pthread_cond_t queue_not_empty;
+    pthread_cond_t queue_not_full;
+} MetricQueue;
 
 //////// actions ////////
 

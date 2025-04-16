@@ -8,6 +8,7 @@
 #include "minispark.h"
 
 #define ROUNDS 10
+//#define ROUNDS 1
 #define NUMFILES (1<<ROUNDS)
 #define FILENAMESIZE 100
 
